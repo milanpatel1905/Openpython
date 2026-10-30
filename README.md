@@ -32,7 +32,7 @@ The Ollama server must be running and reachable **from the machine running the n
 
 ## Privacy
 
-Openpython sends only the current prompt, not earlier notebook history. Hosted providers may retain prompts, and Jupyter saves cell source/output in notebooks. Use `%openpython --private` to type a request without placing it in the cell source; the request is still sent to the configured provider. For limitations and local-model guidance, see [Privacy notes](PRIVACY.md).
+Openpython sends only the current prompt, not earlier notebook history. The kernel calls the provider directly; no page is opened or added to browser URL history. Network services may still see connection metadata, and the provider receives the prompt and may log it. Jupyter saves cell source/output in notebooks. Use `%openpython --private` to type a request without placing it in the cell source; the request is still sent to the provider. See [Privacy notes](PRIVACY.md) for details.
 
 ## Use it
 

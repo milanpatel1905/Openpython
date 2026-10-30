@@ -113,7 +113,8 @@ def generate_code(prompt: str, *, timeout: float = 60.0) -> str:
             {"role": "user", "content": prompt},
         ],
     }
-    headers = {"Content-Type": "application/json", "User-Agent": "openpython-notebook/0.1"}
+    # Do not advertise a Jupyter/Openpython-specific User-Agent or add a Referer.
+    headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     request = Request(

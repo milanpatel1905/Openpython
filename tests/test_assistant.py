@@ -53,6 +53,7 @@ class AssistantTests(unittest.TestCase):
         request = urlopen.call_args.args[0]
         self.assertEqual(request.full_url, "https://api.openai.com/v1/chat/completions")
         self.assertEqual(request.get_header("Authorization"), "Bearer test-key")
+        self.assertIsNone(request.get_header("User-agent"))
         body = json.loads(request.data)
         self.assertEqual(body["model"], "test-model")
         self.assertEqual(len(body["messages"]), 2)

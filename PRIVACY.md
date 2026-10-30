@@ -4,7 +4,9 @@ Openpython is designed to send a single request at a time. The request payload c
 
 ## What still leaves the notebook
 
-The current prompt is sent over HTTPS to the AI provider configured for your kernel. The provider processes it and may retain or log it according to the provider's terms and settings. Openpython cannot control or guarantee the provider's retention, access, or training policies. Do not send confidential material unless the provider and your organization's rules permit it.
+The current prompt is sent over HTTPS to the AI provider configured for your kernel. This request is made by the notebook **kernel**, not by browser navigation: it does not open a page or add a URL to browser history. Openpython does not send a `Referer` or an Openpython/Jupyter-specific `User-Agent`; the HTTP library may still use its generic Python user-agent. The provider sees the API request and may associate it with your API account, process it, and retain/log it under its own terms and settings. Openpython cannot hide an API request from the provider or guarantee the provider will not log it.
+
+HTTPS encrypts the request and response contents in transit, but your network, firewall, or proxy may still record the destination service and connection metadata (such as time and traffic volume). The current prompt is sent to the provider, so do not send confidential material unless the provider and your organization's rules permit it. For no hosted-provider request, use a local model endpoint and verify that it does not forward traffic elsewhere.
 
 ## Hide prompt text from the notebook cell
 
