@@ -7,18 +7,31 @@ import shlex
 from getpass import getpass
 from typing import Optional
 
-from .assistant import DEFAULT_BASE_URL, OpenPythonError, generate_code
+from .assistant import (
+    DEFAULT_BASE_URL,
+    OpenPythonError,
+    delete_saved_api_key,
+    generate_code,
+    get_api_key,
+    save_api_key,
+)
 
 
 def _prompt_for_openai_key() -> None:
-    """Ask once, only when the default hosted provider needs a key."""
+    """Ask once and save the default hosted-provider key for this user."""
     base_url = os.getenv("OPENPYTHON_BASE_URL", DEFAULT_BASE_URL)
-    if "api.openai.com" not in base_url or os.getenv("OPENPYTHON_API_KEY") or os.getenv("OPENAI_API_KEY"):
+    if "api.openai.com" not in base_url or get_api_key():
         return
     key = getpass("OpenAI API key (input is hidden): ").strip()
     if not key:
         raise OpenPythonError("No API key entered. Set OPENPYTHON_API_KEY and try again.")
     os.environ["OPENPYTHON_API_KEY"] = key
+    try:
+        save_api_key(key)
+    except OSError:
+        print("Could not save the key locally; it will last only for this kernel session.")
+    else:
+        print("API key saved on this computer for future notebook sessions.")
 
 
 def load_ipython_extension(ipython) -> None:
@@ -36,12 +49,35 @@ def load_ipython_extension(ipython) -> None:
             except ValueError as exc:
                 raise OpenPythonError(f"Could not parse options: {exc}") from None
 
+            if args and args[0] in ("--set-key", "--forget-key"):
+                if cell is not None or len(args) != 1:
+                    raise OpenPythonError("Use %openpython --set-key or %openpython --forget-key by itself.")
+                if args[0] == "--forget-key":
+                    delete_saved_api_key()
+                    os.environ.pop("OPENPYTHON_API_KEY", None)
+                    os.environ.pop("OPENAI_API_KEY", None)
+                    print("Saved Openpython key removed from this computer.")
+                else:
+                    key = getpass("OpenAI API key (input is hidden): ").strip()
+                    if not key:
+                        raise OpenPythonError("No API key entered; existing settings were not changed.")
+                    os.environ["OPENPYTHON_API_KEY"] = key
+                    try:
+                        save_api_key(key)
+                    except OSError:
+                        print("Could not save the key locally; it will last only for this kernel session.")
+                    else:
+                        print("API key saved on this computer for future notebook sessions.")
+                return None
+
             run_generated = False
             if args and args[0] in ("--help", "-h"):
                 print(
                     "%openpython <short task>       Generate Python code\n"
                     "%%openpython [--run]           Generate code from the cell body\n"
                     "%%openpython --run             Generate and execute in this kernel\n"
+                    "%openpython --set-key          Save or replace your local API key\n"
+                    "%openpython --forget-key       Remove the saved local API key\n"
                     "\nGenerated code is displayed but not executed unless --run is explicit."
                 )
                 return None

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
+from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 from typing import Optional
@@ -21,10 +23,55 @@ class OpenPythonError(RuntimeError):
     """An actionable configuration, network, or provider error."""
 
 
+def _credential_path() -> Path:
+    override = os.getenv("OPENPYTHON_CONFIG_DIR")
+    if override:
+        directory = Path(override).expanduser()
+    elif sys.platform == "win32":
+        directory = Path(os.getenv("APPDATA", Path.home() / "AppData" / "Roaming")) / "Openpython"
+    else:
+        directory = Path.home() / ".config" / "openpython"
+    return directory / "credentials.json"
+
+
+def get_api_key() -> Optional[str]:
+    """Return the key from the environment or this user's local config file."""
+    key = os.getenv("OPENPYTHON_API_KEY") or os.getenv("OPENAI_API_KEY")
+    if key:
+        return key
+    try:
+        data = json.loads(_credential_path().read_text(encoding="utf-8"))
+        key = data.get("OPENPYTHON_API_KEY") if isinstance(data, dict) else None
+        return key if isinstance(key, str) and key else None
+    except (OSError, ValueError):
+        return None
+
+
+def save_api_key(key: str) -> None:
+    """Persist a key in a per-user config file with owner-only POSIX permissions."""
+    path = _credential_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if os.name != "nt":
+        os.chmod(path.parent, 0o700)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        json.dump({"OPENPYTHON_API_KEY": key}, stream)
+    if os.name != "nt":
+        os.chmod(path, 0o600)
+
+
+def delete_saved_api_key() -> None:
+    """Remove the locally saved key, if present."""
+    try:
+        _credential_path().unlink()
+    except FileNotFoundError:
+        pass
+
+
 def _configuration() -> tuple[str, str, Optional[str]]:
     base_url = os.getenv("OPENPYTHON_BASE_URL", DEFAULT_BASE_URL).strip().rstrip("/")
     model = os.getenv("OPENPYTHON_MODEL", DEFAULT_MODEL).strip()
-    api_key = os.getenv("OPENPYTHON_API_KEY") or os.getenv("OPENAI_API_KEY")
+    api_key = get_api_key()
     if not base_url or not model:
         raise OpenPythonError("OPENPYTHON_BASE_URL and OPENPYTHON_MODEL cannot be empty.")
     if "api.openai.com" in base_url and not api_key:

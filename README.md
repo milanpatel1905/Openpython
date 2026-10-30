@@ -16,7 +16,7 @@ The cell prints a ready message. No browser, terminal, notebook extension setup,
 
 ## Configure a hosted model
 
-OpenAI is the default provider (`gpt-4o-mini`). On your first request, Openpython asks for your API key using a masked prompt and keeps it only in the current kernel session; it is not written into the notebook. You must already have a provider account and key, and provider usage may cost money. You can also set `OPENAI_API_KEY` instead of `OPENPYTHON_API_KEY`. To use another OpenAI-compatible provider, configure these environment variables **before** asking for code:
+OpenAI is the default provider (`gpt-4o-mini`). On your first request, Openpython asks for your API key using a masked prompt and saves it in a user-local config file, so you won't need to re-enter it on this computer. The key is not written into your notebook or repository; the file is plain text with owner-only permissions on POSIX systems. Keep your computer account private, or run `%openpython --forget-key` to remove the saved key. Use `%openpython --set-key` to replace it. You must already have a provider account and key, and provider usage may cost money. You can also set `OPENAI_API_KEY` instead of `OPENPYTHON_API_KEY`. To use another OpenAI-compatible provider, configure these environment variables **before** asking for code:
 
 - `OPENPYTHON_BASE_URL`: provider API base URL, e.g. `https://api.example.com/v1`
 - `OPENPYTHON_MODEL`: model identifier expected by that provider
