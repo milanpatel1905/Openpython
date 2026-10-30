@@ -96,6 +96,7 @@ def load_ipython_extension(ipython) -> None:
             return None
 
     ipython.register_magics(OpenPythonMagics)
+    print("Openpython ready. Try: %openpython create a list of squares from 1 to 10")
 
 
 def start() -> None:
@@ -109,5 +110,3 @@ def start() -> None:
     if shell is None:
         raise RuntimeError("No active IPython kernel found. Run this inside a Jupyter notebook.")
     load_ipython_extension(shell)
-    print("Openpython is ready. Try: %openpython create a list of squares from 1 to 10")
-    print("Use %%openpython --run in a cell to generate and execute code. See %openpython --help.")

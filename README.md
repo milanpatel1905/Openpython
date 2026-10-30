@@ -1,6 +1,6 @@
 # Openpython
 
-A small Jupyter/IPython helper for asking an AI provider to write Python code from the notebook. It sends a request directly from the active kernel to an OpenAI-compatible API; it does not open a browser, start a web server, or install a frontend extension.
+A small Jupyter/IPython helper for asking an AI provider to write Python code from the notebook. It sends a request directly from the active kernel to an OpenAI-compatible API; it does not open a browser, start a web server, or install a frontend extension. See the [usage guidelines](GUIDELINES.md) for safe prompting, key management, and troubleshooting.
 
 > **An internet connection is not an AI service or an API key.** For hosted models, provide your own provider API key. Alternatively, point Openpython at a local OpenAI-compatible service such as Ollama. Provider usage may incur charges.
 
