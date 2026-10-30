@@ -2,10 +2,23 @@
 
 from __future__ import annotations
 
+import os
 import shlex
+from getpass import getpass
 from typing import Optional
 
-from .assistant import OpenPythonError, generate_code
+from .assistant import DEFAULT_BASE_URL, OpenPythonError, generate_code
+
+
+def _prompt_for_openai_key() -> None:
+    """Ask once, only when the default hosted provider needs a key."""
+    base_url = os.getenv("OPENPYTHON_BASE_URL", DEFAULT_BASE_URL)
+    if "api.openai.com" not in base_url or os.getenv("OPENPYTHON_API_KEY") or os.getenv("OPENAI_API_KEY"):
+        return
+    key = getpass("OpenAI API key (input is hidden): ").strip()
+    if not key:
+        raise OpenPythonError("No API key entered. Set OPENPYTHON_API_KEY and try again.")
+    os.environ["OPENPYTHON_API_KEY"] = key
 
 
 def load_ipython_extension(ipython) -> None:
@@ -39,6 +52,7 @@ def load_ipython_extension(ipython) -> None:
                 args = args[1:]
 
             prompt = " ".join(args) if cell is None else " ".join(args + [cell.strip()]).strip()
+            _prompt_for_openai_key()
             code = generate_code(prompt)
             display(Code(code, language="python"))
             if run_generated:

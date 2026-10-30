@@ -9,20 +9,14 @@ A small Jupyter/IPython helper for asking an AI provider to write Python code fr
 Run this once in a Jupyter cell (it installs this GitHub project into the *current kernel* and activates the magic commands):
 
 ```python
-import subprocess, sys; subprocess.check_call([sys.executable, "-m", "pip", "-q", "install", "git+https://github.com/milanpatel1905/Openpython.git@arena/9137e036-openpython"]); import openpython; openpython.start()
+get_ipython().run_line_magic('pip', 'install -q git+https://github.com/milanpatel1905/Openpython.git@arena/9137e036-openpython'); get_ipython().run_line_magic('load_ext', 'openpython')
 ```
 
 The cell prints a ready message. No browser, terminal, notebook extension setup, or long prompt is needed. You do need a working network connection to install from GitHub and to reach a hosted model.
 
 ## Configure a hosted model
 
-Set a key in the kernel without saving it in the notebook source:
-
-```python
-import getpass, os; os.environ["OPENPYTHON_API_KEY"] = getpass.getpass("AI provider API key: ")
-```
-
-OpenAI is the default provider (`gpt-4o-mini`). You can also set `OPENAI_API_KEY` instead of `OPENPYTHON_API_KEY`. To use another OpenAI-compatible provider, configure these environment variables **before** asking for code:
+OpenAI is the default provider (`gpt-4o-mini`). On your first request, Openpython asks for your API key using a masked prompt and keeps it only in the current kernel session; it is not written into the notebook. You must already have a provider account and key, and provider usage may cost money. You can also set `OPENAI_API_KEY` instead of `OPENPYTHON_API_KEY`. To use another OpenAI-compatible provider, configure these environment variables **before** asking for code:
 
 - `OPENPYTHON_BASE_URL`: provider API base URL, e.g. `https://api.example.com/v1`
 - `OPENPYTHON_MODEL`: model identifier expected by that provider
