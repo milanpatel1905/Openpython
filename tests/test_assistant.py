@@ -55,6 +55,8 @@ class AssistantTests(unittest.TestCase):
         self.assertEqual(request.get_header("Authorization"), "Bearer test-key")
         body = json.loads(request.data)
         self.assertEqual(body["model"], "test-model")
+        self.assertEqual(len(body["messages"]), 2)
+        self.assertEqual([message["role"] for message in body["messages"]], ["system", "user"])
         self.assertEqual(body["messages"][1]["content"], "add one and one")
 
     @patch("openpython.assistant.urlopen")

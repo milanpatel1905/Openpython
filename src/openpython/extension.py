@@ -78,6 +78,7 @@ def load_ipython_extension(ipython) -> None:
                     "%%openpython --run             Generate and execute in this kernel\n"
                     "%openpython --set-key          Save or replace your local API key\n"
                     "%openpython --forget-key       Remove the saved local API key\n"
+                    "%openpython --private          Enter a hidden, unsaved prompt\n"
                     "\nGenerated code is displayed but not executed unless --run is explicit."
                 )
                 return None
@@ -87,7 +88,14 @@ def load_ipython_extension(ipython) -> None:
                 run_generated = True
                 args = args[1:]
 
-            prompt = " ".join(args) if cell is None else " ".join(args + [cell.strip()]).strip()
+            if args and args[0] == "--private":
+                if cell is not None or len(args) != 1:
+                    raise OpenPythonError("Use %openpython --private by itself; enter the task at the hidden prompt.")
+                prompt = getpass("Task (hidden here; it will still be sent to your AI provider): ").strip()
+                if not prompt:
+                    raise OpenPythonError("No task entered.")
+            else:
+                prompt = " ".join(args) if cell is None else " ".join(args + [cell.strip()]).strip()
             _prompt_for_openai_key()
             code = generate_code(prompt)
             display(Code(code, language="python"))

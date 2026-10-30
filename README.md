@@ -1,6 +1,6 @@
 # Openpython
 
-A small Jupyter/IPython helper for asking an AI provider to write Python code from the notebook. It sends a request directly from the active kernel to an OpenAI-compatible API; it does not open a browser, start a web server, or install a frontend extension. See the [usage guidelines](GUIDELINES.md) for safe prompting, key management, and troubleshooting.
+A small Jupyter/IPython helper for asking an AI provider to write Python code from the notebook. It sends the current request directly from the active kernel to an OpenAI-compatible API; it does not send previous cells or notebook history automatically, open a browser, start a web server, or install a frontend extension. The provider receives the current prompt and may retain it under its own policies. See the [usage guidelines](GUIDELINES.md) for privacy details, safe prompting, key management, and troubleshooting.
 
 > **An internet connection is not an AI service or an API key.** For hosted models, provide your own provider API key. Alternatively, point Openpython at a local OpenAI-compatible service such as Ollama. Provider usage may incur charges.
 
@@ -29,6 +29,10 @@ import os; os.environ["OPENPYTHON_BASE_URL"] = "http://localhost:11434/v1"; os.e
 ```
 
 The Ollama server must be running and reachable **from the machine running the notebook kernel**. `localhost` refers to that machine, not the browser.
+
+## Privacy
+
+Openpython sends only the current prompt, not earlier notebook history. Hosted providers may retain prompts, and Jupyter saves cell source/output in notebooks. Use `%openpython --private` to type a request without placing it in the cell source; the request is still sent to the configured provider. For limitations and local-model guidance, see [Privacy notes](PRIVACY.md).
 
 ## Use it
 

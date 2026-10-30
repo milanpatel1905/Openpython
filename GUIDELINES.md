@@ -1,6 +1,6 @@
 # Openpython usage guidelines
 
-A practical guide for using Openpython in Jupyter notebooks. Openpython sends your prompt directly from the notebook kernel to the configured AI provider. It does not inspect or upload the rest of your notebook automatically.
+A practical guide for using Openpython in Jupyter notebooks. Openpython sends only the current request to the configured AI provider; it does not read or send previous notebook cells, outputs, variables, or IPython history automatically. Separate requests are not added to an Openpython conversation history.
 
 ## 1. Install and start
 
@@ -56,7 +56,15 @@ Using the existing DataFrame `df` with columns `date` and `revenue`, plot monthl
 Do not modify `df`; label both axes and handle missing dates.
 ```
 
-## 4. Protect data and credentials
+## 4. Privacy and credentials
+
+Openpython does not transmit your notebook history or dataset automatically. A normal `%openpython ...` or `%%openpython` request is visible in the notebook cell and may be saved with the notebook. To enter a task without putting its text in the cell source or ordinary IPython input history, run:
+
+```python
+%openpython --private
+```
+
+Type the task into the hidden prompt. This keeps the prompt text out of the cell source, but **still sends that task to the configured AI provider**. Provider retention/logging depends on that provider's policies; Openpython cannot guarantee the provider will not retain or access a request. Jupyter may save generated output, and notebook server administrators or anyone with access to your account/files may be able to see saved notebooks. Clear outputs and avoid saving sensitive results if that is a concern. For data that must not leave your computer, use a local model endpoint (such as Ollama) reachable from the kernel, and verify that the model service itself does not forward requests elsewhere.
 
 - Your prompt is sent to the configured AI provider. Do not include passwords, API keys, private customer data, or confidential notebook contents unless you are authorized to share them with that provider.
 - Generated code is untrusted until reviewed. Be especially careful with file deletion/overwriting, shell commands, package installs, network calls, credential access, and database writes.
