@@ -14,6 +14,16 @@ import sys, subprocess; subprocess.check_call([sys.executable, '-m', 'pip', 'ins
 
 The cell prints a ready message. No browser, terminal, notebook extension setup, or long prompt is needed. You do need a working network connection to install from GitHub and to reach a hosted model.
 
+### If GitHub cannot be reached
+
+Use the downloadable offline wheel `openpython_notebook-0.1.0-py3-none-any.whl`: upload it to the Jupyter working folder, then run this cell. This installs Openpython without contacting GitHub or PyPI:
+
+```python
+import sys, subprocess; subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--no-index', '--no-deps', 'openpython_notebook-0.1.0-py3-none-any.whl']); get_ipython().run_line_magic('load_ext', 'openpython')
+```
+
+The offline wheel solves installation only. A hosted AI API still needs network/DNS access to that provider. If that provider is unreachable too, ask your network administrator or use a network that permits it.
+
 ## Configure a hosted model
 
 OpenAI is the default provider (`gpt-4o-mini`). On your first request, Openpython asks for your API key using a masked prompt and saves it in a user-local config file, so you won't need to re-enter it on this computer. The key is not written into your notebook or repository; the file is plain text with owner-only permissions on POSIX systems. Keep your computer account private, or run `%openpython --forget-key` to remove the saved key. Use `%openpython --set-key` to replace it. You must already have a provider account and key, and provider usage may cost money. You can also set `OPENAI_API_KEY` instead of `OPENPYTHON_API_KEY`. To use another OpenAI-compatible provider, configure these environment variables **before** asking for code:
