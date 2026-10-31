@@ -88,6 +88,7 @@ For local-only operation, install Ollama, make the model available, and run `%op
 
 ## 6. Common issues
 
+- **Install says `Could not resolve host: github.com`:** the PC cannot resolve/reach GitHub; this is a DNS/network/proxy issue, not an Openpython error. Restore access to GitHub (or use an approved network/hotspot), then rerun the README bootstrap line. The installer stops immediately on failure, so it will not follow with a confusing missing-module error.
 - **`%openpython` is not recognized:** run `%load_ext openpython` in the current kernel. If the package is not installed, rerun the README bootstrap line.
 - **Authentication error / HTTP 401:** check the provider key and model. Replace the key with `%openpython --set-key`; restart the kernel if you changed environment settings.
 - **Connection or timeout error:** check that the kernel machine—not only your browser—can reach the provider and that the base URL is correct.

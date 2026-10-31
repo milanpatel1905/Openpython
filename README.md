@@ -9,7 +9,7 @@ A small Jupyter/IPython helper for asking an AI provider to write Python code fr
 Run this once in a Jupyter cell (it installs this GitHub project into the *current kernel* and activates the magic commands):
 
 ```python
-get_ipython().run_line_magic('pip', 'install -q -U git+https://github.com/milanpatel1905/Openpython.git@arena/9137e036-openpython'); get_ipython().run_line_magic('load_ext', 'openpython')
+import sys, subprocess; subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-q', '-U', 'git+https://github.com/milanpatel1905/Openpython.git@arena/9137e036-openpython']); get_ipython().run_line_magic('load_ext', 'openpython')
 ```
 
 The cell prints a ready message. No browser, terminal, notebook extension setup, or long prompt is needed. You do need a working network connection to install from GitHub and to reach a hosted model.
