@@ -8,12 +8,17 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from openpython.assistant import (
+    LOCAL_BASE_URL,
+    LOCAL_MODEL,
     OpenPythonError,
+    _configuration,
     _extract_code,
     delete_saved_api_key,
     generate_code,
     get_api_key,
+    get_local_only,
     save_api_key,
+    save_local_only,
 )
 
 
@@ -22,6 +27,9 @@ class AssistantTests(unittest.TestCase):
         self.env = patch.dict(os.environ, {}, clear=True)
         self.env.start()
         self.addCleanup(self.env.stop)
+        self.config_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.config_dir.cleanup)
+        os.environ["OPENPYTHON_CONFIG_DIR"] = self.config_dir.name
 
     def test_openai_requires_key(self):
         with self.assertRaisesRegex(OpenPythonError, "No API key"):
@@ -75,6 +83,25 @@ class AssistantTests(unittest.TestCase):
         request = urlopen.call_args.args[0]
         self.assertEqual(request.full_url, "http://localhost:11434/v1/chat/completions")
         self.assertIsNone(request.get_header("Authorization"))
+
+    def test_local_only_defaults_to_loopback_without_a_key(self):
+        os.environ["OPENPYTHON_LOCAL_ONLY"] = "1"
+        self.assertEqual(_configuration(), (LOCAL_BASE_URL, LOCAL_MODEL, None))
+
+    def test_local_only_preference_persists_across_kernel_sessions(self):
+        with tempfile.TemporaryDirectory() as config_dir:
+            os.environ["OPENPYTHON_CONFIG_DIR"] = config_dir
+            save_local_only(True)
+            self.assertTrue(get_local_only())
+            self.assertEqual(_configuration(), (LOCAL_BASE_URL, LOCAL_MODEL, None))
+
+    @patch("openpython.assistant.urlopen")
+    def test_local_only_rejects_remote_url_before_any_request(self, urlopen):
+        os.environ["OPENPYTHON_LOCAL_ONLY"] = "1"
+        os.environ["OPENPYTHON_BASE_URL"] = "https://api.example.com/v1"
+        with self.assertRaisesRegex(OpenPythonError, "Local-only mode blocks"):
+            generate_code("make a list")
+        urlopen.assert_not_called()
 
     def test_blank_prompt_is_rejected(self):
         with self.assertRaisesRegex(OpenPythonError, "Add a short task"):

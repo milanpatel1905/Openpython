@@ -84,15 +84,7 @@ os.environ["OPENPYTHON_API_KEY"] = "your-key"
 
 Set a provider key without putting it in notebook source by running `%openpython --set-key` in a separate cell; it uses hidden input and saves the key locally. Openpython accepts `OPENAI_API_KEY` as an environment-variable alias.
 
-For a local Ollama server that exposes the OpenAI-compatible API, configure it like this:
-
-```python
-import os
-os.environ["OPENPYTHON_BASE_URL"] = "http://localhost:11434/v1"
-os.environ["OPENPYTHON_MODEL"] = "qwen2.5-coder:7b"
-```
-
-Ollama must already be running and the model must be available. `localhost` means the machine running the notebook kernel.
+For local-only operation, install Ollama, make the model available, and run `%openpython --local-only`. This saves a local-only preference and uses the loopback endpoint `http://127.0.0.1:11434/v1` with `qwen2.5-coder:7b` by default. Ollama must be running on the same machine as the notebook kernel. Local-only mode rejects remote and HTTPS model URLs. Run `%openpython --hosted` to explicitly allow hosted requests again.
 
 ## 6. Common issues
 

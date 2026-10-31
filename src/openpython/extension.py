@@ -9,16 +9,21 @@ from typing import Optional
 
 from .assistant import (
     DEFAULT_BASE_URL,
+    LOCAL_BASE_URL,
     OpenPythonError,
     delete_saved_api_key,
     generate_code,
     get_api_key,
+    get_local_only,
     save_api_key,
+    save_local_only,
 )
 
 
 def _prompt_for_openai_key() -> None:
     """Ask once and save the default hosted-provider key for this user."""
+    if get_local_only():
+        return
     base_url = os.getenv("OPENPYTHON_BASE_URL", DEFAULT_BASE_URL)
     if "api.openai.com" not in base_url or get_api_key():
         return
@@ -49,10 +54,26 @@ def load_ipython_extension(ipython) -> None:
             except ValueError as exc:
                 raise OpenPythonError(f"Could not parse options: {exc}") from None
 
-            if args and args[0] in ("--set-key", "--forget-key"):
+            if args and args[0] in ("--set-key", "--forget-key", "--local-only", "--hosted"):
                 if cell is not None or len(args) != 1:
-                    raise OpenPythonError("Use %openpython --set-key or %openpython --forget-key by itself.")
-                if args[0] == "--forget-key":
+                    raise OpenPythonError("Run the Openpython setting command by itself in a line cell.")
+                if args[0] == "--local-only":
+                    os.environ["OPENPYTHON_LOCAL_ONLY"] = "1"
+                    try:
+                        save_local_only(True)
+                    except OSError:
+                        print("Local-only mode is active for this kernel but could not be saved for future sessions.")
+                    else:
+                        print("Local-only mode saved. Model requests are restricted to loopback HTTP; no external model requests will be made.")
+                elif args[0] == "--hosted":
+                    os.environ["OPENPYTHON_LOCAL_ONLY"] = "0"
+                    try:
+                        save_local_only(False)
+                    except OSError:
+                        print("Hosted mode is active for this kernel but could not be saved for future sessions.")
+                    else:
+                        print("Hosted mode saved. Requests can be sent to the configured provider over the network.")
+                elif args[0] == "--forget-key":
                     delete_saved_api_key()
                     os.environ.pop("OPENPYTHON_API_KEY", None)
                     os.environ.pop("OPENAI_API_KEY", None)
@@ -79,6 +100,8 @@ def load_ipython_extension(ipython) -> None:
                     "%openpython --set-key          Save or replace your local API key\n"
                     "%openpython --forget-key       Remove the saved local API key\n"
                     "%openpython --private          Enter a hidden, unsaved prompt\n"
+                    "%openpython --local-only       Block external model requests\n"
+                    "%openpython --hosted           Allow hosted-provider requests\n"
                     "\nGenerated code is displayed but not executed unless --run is explicit."
                 )
                 return None

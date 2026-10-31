@@ -2,17 +2,21 @@
 
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener, urlopen
 from typing import Optional
 
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_MODEL = "gpt-4o-mini"
+LOCAL_BASE_URL = "http://127.0.0.1:11434/v1"
+LOCAL_MODEL = "qwen2.5-coder:7b"
 SYSTEM_PROMPT = """You are Openpython, a concise Python coding assistant inside a Jupyter notebook.
 Answer with only the Python code needed for the user's request. Do not use Markdown
 fences or add prose. Prefer clear, notebook-friendly code. Do not assume variables
@@ -21,6 +25,24 @@ or files exist unless the user mentioned them. Never include secrets in the answ
 
 class OpenPythonError(RuntimeError):
     """An actionable configuration, network, or provider error."""
+
+
+def _is_loopback_http(url: str) -> bool:
+    try:
+        parsed = urlsplit(url)
+        address = ipaddress.ip_address(parsed.hostname or "")
+        return parsed.scheme == "http" and address.is_loopback and not parsed.username and not parsed.password
+    except ValueError:
+        return False
+
+
+class _LoopbackRedirectHandler(HTTPRedirectHandler):
+    """Prevent a local endpoint from redirecting a local-only request outward."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not _is_loopback_http(newurl):
+            raise OpenPythonError("Local-only mode blocked a redirect away from loopback HTTP.")
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
 
 
 def _credential_path() -> Path:
@@ -32,6 +54,34 @@ def _credential_path() -> Path:
     else:
         directory = Path.home() / ".config" / "openpython"
     return directory / "credentials.json"
+
+
+def _write_private_json(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if os.name != "nt":
+        os.chmod(path.parent, 0o700)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+        json.dump(data, stream)
+    if os.name != "nt":
+        os.chmod(path, 0o600)
+
+
+def get_local_only() -> bool:
+    """Read the fail-closed local-only preference, with env override."""
+    env_value = os.getenv("OPENPYTHON_LOCAL_ONLY")
+    if env_value is not None:
+        return env_value.strip().lower() not in {"", "0", "false", "no", "off"}
+    try:
+        data = json.loads((_credential_path().parent / "settings.json").read_text(encoding="utf-8"))
+        return bool(data.get("local_only", False)) if isinstance(data, dict) else False
+    except (OSError, ValueError):
+        return False
+
+
+def save_local_only(enabled: bool) -> None:
+    """Persist the local-only choice for later notebook kernels on this machine."""
+    _write_private_json(_credential_path().parent / "settings.json", {"local_only": bool(enabled)})
 
 
 def get_api_key() -> Optional[str]:
@@ -49,15 +99,7 @@ def get_api_key() -> Optional[str]:
 
 def save_api_key(key: str) -> None:
     """Persist a key in a per-user config file with owner-only POSIX permissions."""
-    path = _credential_path()
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if os.name != "nt":
-        os.chmod(path.parent, 0o700)
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
-        json.dump({"OPENPYTHON_API_KEY": key}, stream)
-    if os.name != "nt":
-        os.chmod(path, 0o600)
+    _write_private_json(_credential_path(), {"OPENPYTHON_API_KEY": key})
 
 
 def delete_saved_api_key() -> None:
@@ -69,11 +111,20 @@ def delete_saved_api_key() -> None:
 
 
 def _configuration() -> tuple[str, str, Optional[str]]:
-    base_url = os.getenv("OPENPYTHON_BASE_URL", DEFAULT_BASE_URL).strip().rstrip("/")
-    model = os.getenv("OPENPYTHON_MODEL", DEFAULT_MODEL).strip()
-    api_key = get_api_key()
+    local_only = get_local_only()
+    default_url = LOCAL_BASE_URL if local_only else DEFAULT_BASE_URL
+    default_model = LOCAL_MODEL if local_only else DEFAULT_MODEL
+    base_url = os.getenv("OPENPYTHON_BASE_URL", default_url).strip().rstrip("/")
+    model = os.getenv("OPENPYTHON_MODEL", default_model).strip()
     if not base_url or not model:
         raise OpenPythonError("OPENPYTHON_BASE_URL and OPENPYTHON_MODEL cannot be empty.")
+    if local_only and not _is_loopback_http(base_url):
+        raise OpenPythonError(
+            "Local-only mode blocks all non-loopback or HTTPS model URLs. Configure an HTTP "
+            "loopback endpoint such as http://127.0.0.1:11434/v1."
+        )
+    # A hosted API key is never sent to a local inference server.
+    api_key = None if local_only else get_api_key()
     if "api.openai.com" in base_url and not api_key:
         raise OpenPythonError(
             "No API key found. Set OPENPYTHON_API_KEY (or OPENAI_API_KEY) in the "
@@ -104,6 +155,7 @@ def generate_code(prompt: str, *, timeout: float = 60.0) -> str:
     if not prompt:
         raise OpenPythonError("Add a short task after %openpython or in the cell body.")
 
+    local_only = get_local_only()
     base_url, model, api_key = _configuration()
     payload = {
         "model": model,
@@ -124,7 +176,11 @@ def generate_code(prompt: str, *, timeout: float = 60.0) -> str:
         method="POST",
     )
     try:
-        with urlopen(request, timeout=timeout) as response:
+        if local_only:
+            response_context = build_opener(ProxyHandler({}), _LoopbackRedirectHandler()).open(request, timeout=timeout)
+        else:
+            response_context = urlopen(request, timeout=timeout)
+        with response_context as response:
             result = json.loads(response.read().decode("utf-8"))
     except HTTPError as exc:
         # Avoid including request headers or credentials in errors shown in notebook output.

@@ -22,13 +22,7 @@ OpenAI is the default provider (`gpt-4o-mini`). On your first request, Openpytho
 - `OPENPYTHON_MODEL`: model identifier expected by that provider
 - `OPENPYTHON_API_KEY`: provider key, if required
 
-For a local Ollama server exposing its OpenAI-compatible endpoint, for example:
-
-```python
-import os; os.environ["OPENPYTHON_BASE_URL"] = "http://localhost:11434/v1"; os.environ["OPENPYTHON_MODEL"] = "qwen2.5-coder:7b"
-```
-
-The Ollama server must be running and reachable **from the machine running the notebook kernel**. `localhost` refers to that machine, not the browser.
+For local-only use, start Ollama with the model available, then run `%openpython --local-only`. This saves a fail-closed setting: Openpython will use `http://127.0.0.1:11434/v1` and `qwen2.5-coder:7b` by default and reject external model URLs. The Ollama server must be running on the machine running the notebook kernel (not necessarily the browser's machine). Use `%openpython --hosted` only when you want to re-enable remote provider requests.
 
 ## Privacy
 

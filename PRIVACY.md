@@ -20,6 +20,16 @@ Enter the task at the hidden prompt. The task is not included in the cell source
 
 Generated code appears in notebook output and may be saved with the notebook. Review it before execution, and clear cell outputs before saving/sharing if they contain sensitive information. Jupyter server owners, account administrators, and anyone who can access the notebook file may see saved notebook content.
 
-## Keep requests on your own machine
+## Block external model requests
 
-To avoid sending prompts to a hosted provider, configure a local OpenAI-compatible model server (for example, Ollama) and point Openpython to its local endpoint. The local server must be running on, or reachable from, the machine running the notebook kernel. Verify that the model server does not forward prompts to a third party. Local use does not prevent other users or administrators with access to your computer from seeing notebook files or process data.
+If you do not want Openpython to make an external HTTPS model request, run:
+
+```python
+%openpython --local-only
+```
+
+This preference is saved for later kernels on this computer. In this mode, Openpython defaults to `http://127.0.0.1:11434/v1` and `qwen2.5-coder:7b`. It **fails closed** if configured with a non-loopback or HTTPS model URL, never sends the saved hosted API key to the local model, and blocks redirects away from loopback HTTP. Run `%openpython --hosted` to explicitly re-enable hosted-provider requests.
+
+A local OpenAI-compatible model server (for example Ollama) must be installed, running, and have the model downloaded. The inference request then goes only to the loopback address on the notebook-kernel machine; it is not sent to a hosted AI provider. If Jupyter runs on a remote server, install/run the model on that server or an appropriate local service reachable there.
+
+This blocks Openpython's **model-generation** traffic, not installation or setup traffic: installing/upgrading from GitHub or downloading a model may still make internet/HTTPS requests. Do that beforehand, then use local-only mode. No software can guarantee that the operating system or local administrators do not record local activity, or prevent them from accessing notebook files/processes.
